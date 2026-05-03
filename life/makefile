@@ -1,4 +1,4 @@
-CC = gcc
+CC = mpicc
 CFLAGS = -g -Wall -I$(INCLUDE_DIR)
 
 SRC_DIR = src
