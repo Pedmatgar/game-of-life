@@ -1,13 +1,14 @@
 #include <stdio.h>
 #include "life.h"
 
-#define PERF_ROWS VIRTUAL_MAX_COLS
-#define PERF_COLS VIRTUAL_MAX_COLS
+// Square world: PERF_SIZE x PERF_SIZE (uses VIRTUAL_MAX_COLS as the single
+// dimension limit since the grid is intentionally square)
+#define PERF_SIZE  VIRTUAL_MAX_COLS
 #define PERF_ITERS 1000
 
 /*
  * Game of life performance tests.
- * Each scenario runs PERF_ITERS generations on a PERF_ROWS x PERF_COLS world
+ * Each scenario runs PERF_ITERS generations on a PERF_SIZE x PERF_SIZE world
  * and reports total time, average time per generation, and throughput.
  */
 
@@ -36,7 +37,7 @@ static void fill_checkerboard(int world[][MAX_COLS], int rows, int cols)
 static void fill_sparse(int world[][MAX_COLS], int rows, int cols)
 {
 	clear_world(world, rows, cols);
-	// Single glider-like cross in the center
+	// Cross (plus-sign) centered in the world
 	int mr = rows / 2 + 1;
 	int mc = cols / 2 + 1;
 	for (int r = 1; r <= rows; r++)
@@ -49,35 +50,35 @@ int main(void)
 {
 	int rule[RULE_SIZE] = {3, 2, 3}; // Default Conway rule
 
-	// Effective array size: (PERF_ROWS + 2) x MAX_COLS
-	int world[(PERF_ROWS + 2)][MAX_COLS];
-	int aux[(PERF_ROWS + 2)][MAX_COLS];
+	// Effective array size: (PERF_SIZE + 2) x MAX_COLS
+	int world[(PERF_SIZE + 2)][MAX_COLS];
+	int aux[(PERF_SIZE + 2)][MAX_COLS];
 
 	double total;
 
 	printf("Performance benchmark: %d x %d world, %d iterations each\n\n",
-		   PERF_ROWS, PERF_COLS, PERF_ITERS);
+		   PERF_SIZE, PERF_SIZE, PERF_ITERS);
 
 	// -------------------------------------------------------------------------------
 	// Scenario 1: Dense world (all cells alive)
 
-	fill_dense(world, PERF_ROWS, PERF_COLS);
-	total = update_world_n_generations_timed(PERF_ITERS, world, PERF_ROWS, PERF_COLS, aux, rule, NULL);
-	report("dense", PERF_ITERS, PERF_ROWS, PERF_COLS, total);
+	fill_dense(world, PERF_SIZE, PERF_SIZE);
+	total = update_world_n_generations_timed(PERF_ITERS, world, PERF_SIZE, PERF_SIZE, aux, rule, NULL);
+	report("dense", PERF_ITERS, PERF_SIZE, PERF_SIZE, total);
 
 	// -------------------------------------------------------------------------------
 	// Scenario 2: Checkerboard pattern
 
-	fill_checkerboard(world, PERF_ROWS, PERF_COLS);
-	total = update_world_n_generations_timed(PERF_ITERS, world, PERF_ROWS, PERF_COLS, aux, rule, NULL);
-	report("checkerboard", PERF_ITERS, PERF_ROWS, PERF_COLS, total);
+	fill_checkerboard(world, PERF_SIZE, PERF_SIZE);
+	total = update_world_n_generations_timed(PERF_ITERS, world, PERF_SIZE, PERF_SIZE, aux, rule, NULL);
+	report("checkerboard", PERF_ITERS, PERF_SIZE, PERF_SIZE, total);
 
 	// -------------------------------------------------------------------------------
 	// Scenario 3: Sparse world (cross in center)
 
-	fill_sparse(world, PERF_ROWS, PERF_COLS);
-	total = update_world_n_generations_timed(PERF_ITERS, world, PERF_ROWS, PERF_COLS, aux, rule, NULL);
-	report("sparse (cross)", PERF_ITERS, PERF_ROWS, PERF_COLS, total);
+	fill_sparse(world, PERF_SIZE, PERF_SIZE);
+	total = update_world_n_generations_timed(PERF_ITERS, world, PERF_SIZE, PERF_SIZE, aux, rule, NULL);
+	report("sparse (cross)", PERF_ITERS, PERF_SIZE, PERF_SIZE, total);
 
 	return 0;
 }
