@@ -176,3 +176,50 @@ total times.  Build and run it with:
 
 Look for the sections labelled **Testing update_world_timed** and
 **Testing update_world_n_generations_timed** in the output.
+
+---
+
+## Specifying the Number of Threads
+
+The simulation uses [OpenMP](https://www.openmp.org/) to parallelize the per-generation
+cell updates across multiple CPU cores.  By default the benchmark runs with **1 thread**
+(sequential execution).
+
+### Running with multiple threads
+
+Pass `--threads N` (or the short form `-t N`) when invoking the built binary directly:
+
+```
+.../game-of-life/life/build/life_test --threads 4
+.../game-of-life/life/build/life_test -t 2
+```
+
+The header line of the benchmark output confirms the active thread count:
+
+```
+Performance benchmark: 71 x 71 world, 1000 iterations each, 4 thread(s)
+```
+
+### Building and running in one step via make
+
+`make` compiles and immediately runs the binary.  The run arguments can be forwarded
+through `ARGS`:
+
+```
+.../game-of-life/life$ make ARGS="--threads 4"
+```
+
+> **Tip:** set `N` to the number of physical (or logical) CPU cores on your machine for
+> the best throughput.  A value larger than the available cores will not improve
+> performance and may slightly degrade it.
+
+### Using the API from your own code
+
+```c
+#include "life.h"
+
+set_num_threads(4);   /* must be called before any update_world* call */
+```
+
+`set_num_threads(n)` delegates to `omp_set_num_threads(n)` and is a no-op for values
+less than 1.
