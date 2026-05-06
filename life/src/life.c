@@ -1,7 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "life.h"
+
+static double elapsed_seconds(struct timespec start, struct timespec end)
+{
+	return (double)(end.tv_sec - start.tv_sec) +
+		   (double)(end.tv_nsec - start.tv_nsec) * 1e-9;
+}
 
 int cell_lives(const int submatrix[3][3], const int rule[RULE_SIZE])
 {
@@ -116,6 +123,36 @@ void update_world_n_generations(
 	{
 		update_world(world, rows_count, cols_count, world_aux, rule);
 	}
+}
+
+double update_world_timed(
+	int world[][MAX_COLS], int rows_count, int cols_count,
+	int world_aux[][MAX_COLS], const int rule[RULE_SIZE])
+{
+	struct timespec start, end;
+	clock_gettime(CLOCK_MONOTONIC, &start);
+	update_world(world, rows_count, cols_count, world_aux, rule);
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	return elapsed_seconds(start, end);
+}
+
+double update_world_n_generations_timed(
+	int n, int world[][MAX_COLS], int rows_count, int cols_count,
+	int world_aux[][MAX_COLS], const int rule[RULE_SIZE],
+	double *step_times)
+{
+	if (n <= 0)
+		return 0.0;
+
+	double total = 0.0;
+	for (int i = 0; i < n; i++)
+	{
+		double t = update_world_timed(world, rows_count, cols_count, world_aux, rule);
+		if (step_times != NULL)
+			step_times[i] = t;
+		total += t;
+	}
+	return total;
 }
 
 void fprint_world(const int world[][MAX_COLS], int rows_count, int cols_count, FILE *__restrict__ __stream)

@@ -181,5 +181,76 @@ int main(void)
 	puts("");
 	print_world(test_world, 11, 11);
 
+	// -------------------------------------------------------------------------------
+	// Testing update_world_timed
+
+	puts("\nTesting update_world_timed");
+
+	// Redo test_world
+	clear_world(test_world, 11, 11);
+	for (row = 3; row <= 9; row++)
+		set_cell(test_world, row, 6, 1);
+	for (col = 3; col <= 9; col++)
+		set_cell(test_world, 6, col, 1);
+
+	double step_time = update_world_timed(test_world, 11, 11, aux_world, rule);
+	printf("Step time: %.9f seconds\n", step_time);
+	if (step_time < 0.0)
+		puts("update_world_timed failed: negative time");
+	// Verify the world was actually updated (center cell should now be dead)
+	if (get_cell(test_world, 6, 6) != 0)
+		puts("update_world_timed failed: world not updated");
+
+	// -------------------------------------------------------------------------------
+	// Testing update_world_n_generations_timed
+
+	puts("\nTesting update_world_n_generations_timed (5 steps, with per-step times)");
+
+	// Redo test_world
+	clear_world(test_world, 11, 11);
+	for (row = 3; row <= 9; row++)
+		set_cell(test_world, row, 6, 1);
+	for (col = 3; col <= 9; col++)
+		set_cell(test_world, 6, col, 1);
+
+	double per_step[5];
+	double total_time = update_world_n_generations_timed(5, test_world, 11, 11, aux_world, rule, per_step);
+	double per_step_sum = 0.0;
+	for (int i = 0; i < 5; i++)
+	{
+		printf("  Step %d: %.9f seconds\n", i + 1, per_step[i]);
+		if (per_step[i] < 0.0)
+			puts("update_world_n_generations_timed failed: negative per-step time");
+		per_step_sum += per_step[i];
+	}
+	printf("Total time: %.9f seconds\n", total_time);
+	if (total_time < 0.0)
+		puts("update_world_n_generations_timed failed: negative total time");
+	if (per_step_sum != total_time)
+		puts("update_world_n_generations_timed failed: per-step sum does not equal total time");
+
+	puts("\nTesting update_world_n_generations_timed (5 steps, without per-step times)");
+
+	// Redo test_world
+	clear_world(test_world, 11, 11);
+	for (row = 3; row <= 9; row++)
+		set_cell(test_world, row, 6, 1);
+	for (col = 3; col <= 9; col++)
+		set_cell(test_world, 6, col, 1);
+
+	total_time = update_world_n_generations_timed(5, test_world, 11, 11, aux_world, rule, NULL);
+	printf("Total time: %.9f seconds\n", total_time);
+	if (total_time < 0.0)
+		puts("update_world_n_generations_timed (no step_times) failed: negative total time");
+
+	// -------------------------------------------------------------------------------
+	// Testing update_world_n_generations_timed with n = 0 (edge case)
+
+	puts("\nTesting update_world_n_generations_timed (n=0 edge case)");
+	total_time = update_world_n_generations_timed(0, test_world, 11, 11, aux_world, rule, NULL);
+	printf("Total time: %.9f seconds\n", total_time);
+	if (total_time != 0.0)
+		puts("update_world_n_generations_timed failed: n=0 should return 0.0");
+
 	return 0;
 }
