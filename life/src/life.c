@@ -119,7 +119,7 @@ void update_world_n_generations(
 	if (n <= 0)
 		return;
 
-	for (size_t i = 0; i <= n; i++)
+	for (size_t i = 0; i < n; i++)
 	{
 		update_world(world, rows_count, cols_count, world_aux, rule);
 	}
