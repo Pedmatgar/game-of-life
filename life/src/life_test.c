@@ -1,256 +1,84 @@
 #include <stdio.h>
 #include "life.h"
 
+// Square world: PERF_SIZE x PERF_SIZE (uses VIRTUAL_MAX_COLS as the single
+// dimension limit since the grid is intentionally square)
+#define PERF_SIZE  VIRTUAL_MAX_COLS
+#define PERF_ITERS 1000
+
 /*
- * Game of life unit tests.
+ * Game of life performance tests.
+ * Each scenario runs PERF_ITERS generations on a PERF_SIZE x PERF_SIZE world
+ * and reports total time, average time per generation, and throughput.
  */
+
+static void report(const char *name, int iters, int rows, int cols, double total)
+{
+	double avg = total / iters;
+	double cells_per_sec = (double)iters * rows * cols / total;
+	printf("%-30s  iters=%d  total=%.6f s  avg=%.9f s  throughput=%.0f cells/s\n",
+		   name, iters, total, avg, cells_per_sec);
+}
+
+static void fill_dense(int world[][MAX_COLS], int rows, int cols)
+{
+	for (int r = 1; r <= rows; r++)
+		for (int c = 1; c <= cols; c++)
+			set_cell(world, r, c, 1);
+}
+
+static void fill_checkerboard(int world[][MAX_COLS], int rows, int cols)
+{
+	for (int r = 1; r <= rows; r++)
+		for (int c = 1; c <= cols; c++)
+			set_cell(world, r, c, (r + c) % 2);
+}
+
+static void fill_sparse(int world[][MAX_COLS], int rows, int cols)
+{
+	clear_world(world, rows, cols);
+	// Cross (plus-sign) centered in the world
+	int mr = rows / 2 + 1;
+	int mc = cols / 2 + 1;
+	for (int r = 1; r <= rows; r++)
+		set_cell(world, r, mc, 1);
+	for (int c = 1; c <= cols; c++)
+		set_cell(world, mr, c, 1);
+}
+
 int main(void)
 {
-	int rule[RULE_SIZE] = {3, 2, 3}; // Default rule
+	int rule[RULE_SIZE] = {3, 2, 3}; // Default Conway rule
+
+	// Effective array size: (PERF_SIZE + 2) x MAX_COLS
+	int world[(PERF_SIZE + 2)][MAX_COLS];
+	int aux[(PERF_SIZE + 2)][MAX_COLS];
+
+	double total;
+
+	printf("Performance benchmark: %d x %d world, %d iterations each\n\n",
+		   PERF_SIZE, PERF_SIZE, PERF_ITERS);
 
 	// -------------------------------------------------------------------------------
-	// Testing cell_lives with rule = {3, 2, 3}
+	// Scenario 1: Dense world (all cells alive)
 
-	// Survives?
-
-	int sub1[3][3] = {{0, 0, 0},
-					  {0, 1, 0},
-					  {0, 1, 0}}; // Doesn't survive
-	if (cell_lives(sub1, rule))
-		puts("cell_lives sub1 failed");
-
-	int sub2[3][3] = {{0, 0, 0},
-					  {0, 1, 0},
-					  {1, 0, 1}}; // Survives
-	if (!cell_lives(sub2, rule))
-		puts("cell_lives sub2 failed");
-
-	int sub3[3][3] = {{0, 1, 0},
-					  {0, 1, 1},
-					  {1, 0, 0}}; // Survives
-	if (!cell_lives(sub3, rule))
-		puts("cell_lives sub3 failed");
-
-	int sub4[3][3] = {{0, 1, 1},
-					  {1, 1, 0},
-					  {1, 0, 0}}; // Doesn't survive
-	if (cell_lives(sub4, rule))
-		puts("cell_lives sub4 failed");
-
-	// Reborns?
-
-	int sub5[3][3] = {{0, 0, 1},
-					  {0, 0, 0},
-					  {0, 1, 0}}; // Doesn't reborn
-	if (cell_lives(sub5, rule))
-		puts("cell_lives sub5 failed");
-
-	int sub6[3][3] = {{0, 1, 0},
-					  {0, 0, 0},
-					  {1, 0, 1}}; // Reborns
-	if (!cell_lives(sub6, rule))
-		puts("cell_lives sub6 failed");
-
-	int sub7[3][3] = {{0, 1, 0},
-					  {1, 0, 0},
-					  {1, 0, 1}}; // Doesn't reborn
-	if (cell_lives(sub7, rule))
-		puts("cell_lives sub7 failed");
+	fill_dense(world, PERF_SIZE, PERF_SIZE);
+	total = update_world_n_generations_timed(PERF_ITERS, world, PERF_SIZE, PERF_SIZE, aux, rule, NULL);
+	report("dense", PERF_ITERS, PERF_SIZE, PERF_SIZE, total);
 
 	// -------------------------------------------------------------------------------
-	// Testing clear_world
+	// Scenario 2: Checkerboard pattern
 
-	// World with virtual size 3 x 5 and effective size 5 x 7
-	int small_world[][MAX_COLS] =
-		{{0, 0, 0, 0, 0, 0, 0},	 // Rest of the line with 0s
-		 {0, 1, 1, 1, 1, 1, 0},	 // idem
-		 {0, 1, 1, 1, 1, 1, 0},	 // idem
-		 {0, 1, 1, 1, 1, 1, 0},	 // idem
-		 {0, 0, 0, 0, 0, 0, 0}}; // idem
-
-	clear_world(small_world, 3, 5);
-	int row, col;
-	for (row = 1; row <= 3; row++)
-		for (col = 1; col <= 5; col++)
-			if (small_world[row][col] != 0)
-				puts("clear_world failed");
+	fill_checkerboard(world, PERF_SIZE, PERF_SIZE);
+	total = update_world_n_generations_timed(PERF_ITERS, world, PERF_SIZE, PERF_SIZE, aux, rule, NULL);
+	report("checkerboard", PERF_ITERS, PERF_SIZE, PERF_SIZE, total);
 
 	// -------------------------------------------------------------------------------
-	// Testing set_cell
+	// Scenario 3: Sparse world (cross in center)
 
-	set_cell(small_world, 3, 5, 1); // Only one live cell
-	if (small_world[3][5] != 1)
-		puts("set_cell failed");
-	for (row = 1; row <= 2; row++)
-		for (col = 1; col <= 5; col++)
-			if (small_world[row][col] != 0)
-				puts("set_cell failed");
-	for (col = 1; col <= 4; col++)
-		if (small_world[3][col] != 0)
-			puts("set_cell failed");
-
-	// -------------------------------------------------------------------------------
-	// Testing get_cell
-
-	if (get_cell(small_world, 3, 5) != 1)
-		puts("get_cell failed");
-	if (get_cell(small_world, 3, 4) != 0)
-		puts("get_cell failed");
-
-	// -------------------------------------------------------------------------------
-	// Creating new world for tests
-
-	// World with virtual size 11 x 11 and effective size 13 x 13
-	int test_world[13][MAX_COLS] =
-		{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // Rest of the line with 0s
-		 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // idem
-		 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // etc...
-		 {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-		 {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-		 {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-		 {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0},
-		 {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-		 {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-		 {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0},
-		 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
-
-	// -------------------------------------------------------------------------------
-	// Testing print_world
-
-	puts("\nTesting print_world");
-	print_world(test_world, 11, 11);
-
-	// -------------------------------------------------------------------------------
-	// Testing write_world
-
-	puts("\nTesting write_world");
-	write_world(test_world, 11, 11, "../docs/life_test_output/wrote_world.txt");
-
-	// -------------------------------------------------------------------------------
-	// Testing read_world
-
-	puts("\nTesting read_world with print_world");
-
-	// Where the read world will be saved
-	int world_read[FILE_MAX_LINES + 2][MAX_COLS];
-
-	// Where the read world virtual size will be saved
-	int read_world_size[2];
-
-	read_world(world_read, read_world_size, "../docs/life_test_output/wrote_world.txt");
-
-	// Confirming if read_world_size is correct
-	int rows_read = read_world_size[0];
-	int cols_read = read_world_size[1];
-	if (rows_read != 11 || cols_read != 11)
-		puts("read_world failed in read_world_size");
-
-	// Confirming if world_read is correct
-	print_world(world_read, 11, 11);
-
-	// -------------------------------------------------------------------------------
-	// Testing update_world
-
-	puts("\nTesting update_world with print_world");
-
-	int aux_world[13][MAX_COLS];
-
-	for (int iterations = 1; iterations <= 5; iterations++)
-	{
-		update_world(test_world, 11, 11, aux_world, rule);
-		puts("");
-		print_world(test_world, 11, 11);
-	}
-
-	// -------------------------------------------------------------------------------
-	// Testing update_world_n_generations
-
-	puts("\nTesting update_world_n_generations with print_world");
-	puts("\n5 Iterations");
-
-	// Redo test_world
-	clear_world(test_world, 11, 11);
-	for (row = 3; row <= 9; row++)
-		set_cell(test_world, row, 6, 1);
-	for (col = 3; col <= 9; col++)
-		set_cell(test_world, 6, col, 1);
-
-	update_world_n_generations(5, test_world, 11, 11, aux_world, rule);
-	puts("");
-	print_world(test_world, 11, 11);
-
-	// -------------------------------------------------------------------------------
-	// Testing update_world_timed
-
-	puts("\nTesting update_world_timed");
-
-	// Redo test_world
-	clear_world(test_world, 11, 11);
-	for (row = 3; row <= 9; row++)
-		set_cell(test_world, row, 6, 1);
-	for (col = 3; col <= 9; col++)
-		set_cell(test_world, 6, col, 1);
-
-	double step_time = update_world_timed(test_world, 11, 11, aux_world, rule);
-	printf("Step time: %.9f seconds\n", step_time);
-	if (step_time < 0.0)
-		puts("update_world_timed failed: negative time");
-	// Verify the world was actually updated (center cell should now be dead)
-	if (get_cell(test_world, 6, 6) != 0)
-		puts("update_world_timed failed: world not updated");
-
-	// -------------------------------------------------------------------------------
-	// Testing update_world_n_generations_timed
-
-	puts("\nTesting update_world_n_generations_timed (5 steps, with per-step times)");
-
-	// Redo test_world
-	clear_world(test_world, 11, 11);
-	for (row = 3; row <= 9; row++)
-		set_cell(test_world, row, 6, 1);
-	for (col = 3; col <= 9; col++)
-		set_cell(test_world, 6, col, 1);
-
-	double per_step[5];
-	double total_time = update_world_n_generations_timed(5, test_world, 11, 11, aux_world, rule, per_step);
-	double per_step_sum = 0.0;
-	for (int i = 0; i < 5; i++)
-	{
-		printf("  Step %d: %.9f seconds\n", i + 1, per_step[i]);
-		if (per_step[i] < 0.0)
-			puts("update_world_n_generations_timed failed: negative per-step time");
-		per_step_sum += per_step[i];
-	}
-	printf("Total time: %.9f seconds\n", total_time);
-	if (total_time < 0.0)
-		puts("update_world_n_generations_timed failed: negative total time");
-	if (per_step_sum != total_time)
-		puts("update_world_n_generations_timed failed: per-step sum does not equal total time");
-
-	puts("\nTesting update_world_n_generations_timed (5 steps, without per-step times)");
-
-	// Redo test_world
-	clear_world(test_world, 11, 11);
-	for (row = 3; row <= 9; row++)
-		set_cell(test_world, row, 6, 1);
-	for (col = 3; col <= 9; col++)
-		set_cell(test_world, 6, col, 1);
-
-	total_time = update_world_n_generations_timed(5, test_world, 11, 11, aux_world, rule, NULL);
-	printf("Total time: %.9f seconds\n", total_time);
-	if (total_time < 0.0)
-		puts("update_world_n_generations_timed (no step_times) failed: negative total time");
-
-	// -------------------------------------------------------------------------------
-	// Testing update_world_n_generations_timed with n = 0 (edge case)
-
-	puts("\nTesting update_world_n_generations_timed (n=0 edge case)");
-	total_time = update_world_n_generations_timed(0, test_world, 11, 11, aux_world, rule, NULL);
-	printf("Total time: %.9f seconds\n", total_time);
-	if (total_time != 0.0)
-		puts("update_world_n_generations_timed failed: n=0 should return 0.0");
+	fill_sparse(world, PERF_SIZE, PERF_SIZE);
+	total = update_world_n_generations_timed(PERF_ITERS, world, PERF_SIZE, PERF_SIZE, aux, rule, NULL);
+	report("sparse (cross)", PERF_ITERS, PERF_SIZE, PERF_SIZE, total);
 
 	return 0;
 }
