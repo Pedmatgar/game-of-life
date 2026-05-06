@@ -114,6 +114,44 @@ void update_world_n_generations(
 	int world_aux[][MAX_COLS], const int rule[RULE_SIZE]);
 
 /*
+ * Function: update_world_timed
+ * ----------------------------
+ * Updates the world by one generation and measures the elapsed time.
+ *
+ * world: matrix of 0s and 1s
+ * rows_count: number of rows
+ * cols_count: number of columns
+ * world_aux: auxiliary world
+ * rule: life game rule -> {maxNeighbors, minNeighbors, neighborsToBorn}
+ *
+ * returns: elapsed time in seconds for this step
+ */
+double update_world_timed(
+	int world[][MAX_COLS], int rows_count, int cols_count,
+	int world_aux[][MAX_COLS], const int rule[RULE_SIZE]);
+
+/*
+ * Function: update_world_n_generations_timed
+ * ----------------------------
+ * Updates the world n generations and measures the elapsed time.
+ *
+ * n: number of generations to update
+ * world: matrix of 0s and 1s
+ * rows_count: number of rows
+ * cols_count: number of columns
+ * world_aux: auxiliary world
+ * rule: life game rule -> {maxNeighbors, minNeighbors, neighborsToBorn}
+ * step_times: optional array of at least n doubles to store per-step times;
+ *             pass NULL to skip per-step collection
+ *
+ * returns: total elapsed time in seconds across all n steps
+ */
+double update_world_n_generations_timed(
+	int n, int world[][MAX_COLS], int rows_count, int cols_count,
+	int world_aux[][MAX_COLS], const int rule[RULE_SIZE],
+	double *step_times);
+
+/*
  * Function: fprint_world
  * ----------------------------
  * Prints the world in a STREAM.
