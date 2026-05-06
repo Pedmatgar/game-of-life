@@ -2,12 +2,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <omp.h>
 #include "life.h"
 
 static double elapsed_seconds(struct timespec start, struct timespec end)
 {
 	return (double)(end.tv_sec - start.tv_sec) +
 		   (double)(end.tv_nsec - start.tv_nsec) * 1e-9;
+}
+
+void set_num_threads(int num_threads)
+{
+	if (num_threads >= 1)
+		omp_set_num_threads(num_threads);
 }
 
 int cell_lives(const int submatrix[3][3], const int rule[RULE_SIZE])
@@ -72,9 +79,10 @@ void update_world(
 	int rows_count, int cols_count,
 	int world_aux[][MAX_COLS], const int rule[RULE_SIZE])
 {
-	for (size_t row = 1; row < rows_count + 1; row++)
+#pragma omp parallel for schedule(static)
+	for (int row = 1; row <= rows_count; row++)
 	{
-		for (size_t col = 1; col < cols_count + 1; col++)
+		for (int col = 1; col <= cols_count; col++)
 		{
 			int pre_row = row - 1;
 			if (pre_row == 0)

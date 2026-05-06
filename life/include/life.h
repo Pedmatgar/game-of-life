@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdio.h>
+#include <omp.h>
 
 #define RULE_SIZE 3
 #define VIRTUAL_MAX_COLS 71
@@ -8,6 +9,16 @@
 #define FILE_MAX_LINES 27
 
 // More about game of life: https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life
+
+/*
+ * Function: set_num_threads
+ * ----------------------------
+ * Sets the number of OpenMP threads used by update_world and related functions.
+ * Must be called before running any timed or untimed world update.
+ *
+ * num_threads: desired thread count (>= 1); values < 1 are ignored
+ */
+void set_num_threads(int num_threads);
 
 /*
  * Function: cell_lives

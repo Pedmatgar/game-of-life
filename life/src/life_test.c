@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "life.h"
 
 // Square world: PERF_SIZE x PERF_SIZE (uses VIRTUAL_MAX_COLS as the single
@@ -46,8 +48,32 @@ static void fill_sparse(int world[][MAX_COLS], int rows, int cols)
 		set_cell(world, mr, c, 1);
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
+	int num_threads = 1;
+
+	for (int i = 1; i < argc; i++)
+	{
+		if ((strcmp(argv[i], "--threads") == 0 || strcmp(argv[i], "-t") == 0) && i + 1 < argc)
+		{
+			char *end;
+			long val = strtol(argv[++i], &end, 10);
+			if (*end != '\0' || val < 1)
+			{
+				fprintf(stderr, "Error: thread count must be a positive integer\n");
+				return 1;
+			}
+			num_threads = (int)val;
+		}
+		else
+		{
+			fprintf(stderr, "Usage: %s [--threads N | -t N]\n", argv[0]);
+			return 1;
+		}
+	}
+
+	set_num_threads(num_threads);
+
 	int rule[RULE_SIZE] = {3, 2, 3}; // Default Conway rule
 
 	// Effective array size: (PERF_SIZE + 2) x MAX_COLS
@@ -56,8 +82,8 @@ int main(void)
 
 	double total;
 
-	printf("Performance benchmark: %d x %d world, %d iterations each\n\n",
-		   PERF_SIZE, PERF_SIZE, PERF_ITERS);
+	printf("Performance benchmark: %d x %d world, %d iterations each, %d thread(s)\n\n",
+		   PERF_SIZE, PERF_SIZE, PERF_ITERS, num_threads);
 
 	// -------------------------------------------------------------------------------
 	// Scenario 1: Dense world (all cells alive)
