@@ -55,7 +55,7 @@ Both functions advance the world normally and return the elapsed time in **secon
 
 int main(void)
 {
-    /* 1. Declare the world (virtual size rows x cols, padded by 1 on each side) */
+    /* 1. Declare the world (virtual size rows x cols; array needs rows+2 = 12 rows) */
     int rows = 10, cols = 10;
     int world[12][MAX_COLS];
     int world_aux[12][MAX_COLS];
@@ -159,9 +159,9 @@ int rule[RULE_SIZE] = {maxNeighbors, minNeighbors, neighborsToBorn};
 
 | Index | Meaning | Conway value |
 |---|---|---|
-| 0 | `maxNeighbors` — maximum live neighbours for a live cell to survive | 3 |
-| 1 | `minNeighbors` — minimum live neighbours for a live cell to survive | 2 |
-| 2 | `neighborsToBorn` — exact live neighbours needed to birth a dead cell | 3 |
+| 0 | `maxNeighbors` — maximum live neighbors for a live cell to survive | 3 |
+| 1 | `minNeighbors` — minimum live neighbors for a live cell to survive | 2 |
+| 2 | `neighborsToBorn` — exact live neighbors needed to birth a dead cell | 3 |
 
 ---
 
