@@ -12,13 +12,8 @@
  */
 void delays(int delay_in_seconds)
 {
-	int millis = 1000 * delay_in_seconds;
-
-	clock_t initial = clock();
-	clock_t final = initial + millis;
-
-	while (clock() < final)
-		;
+	struct timespec ts = { .tv_sec = delay_in_seconds, .tv_nsec = 0 };
+	nanosleep(&ts, NULL);
 }
 
 void animate_world(int n, int world[][VIRTUAL_MAX_COLS + 2],
