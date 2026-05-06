@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <omp.h>
 #include "life.h"
 
 static double elapsed_seconds(struct timespec start, struct timespec end)
@@ -35,6 +36,7 @@ void clear_world(int world[][MAX_COLS], int rows_count, int cols_count)
 	if (cols_count > VIRTUAL_MAX_COLS || rows_count < 2 || cols_count < 2)
 		return;
 
+	#pragma omp parallel for schedule(static)
 	for (size_t row = 1; row < rows_count + 1; row++)
 	{
 		for (size_t col = 1; col < cols_count + 1; col++)
@@ -58,6 +60,7 @@ void copy_world(
 	int world1[][MAX_COLS], int rows_count, int cols_count,
 	int world2[][MAX_COLS])
 {
+	#pragma omp parallel for schedule(static)
 	for (size_t row = 1; row < rows_count + 1; row++)
 	{
 		for (size_t col = 1; col < cols_count + 1; col++)
@@ -72,6 +75,7 @@ void update_world(
 	int rows_count, int cols_count,
 	int world_aux[][MAX_COLS], const int rule[RULE_SIZE])
 {
+	#pragma omp parallel for schedule(static)
 	for (size_t row = 1; row < rows_count + 1; row++)
 	{
 		for (size_t col = 1; col < cols_count + 1; col++)

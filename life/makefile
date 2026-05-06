@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -g -Wall -I$(INCLUDE_DIR)
+CFLAGS = -g -Wall -fopenmp -I$(INCLUDE_DIR)
+LDFLAGS = -fopenmp
 
 SRC_DIR = src
 BUILD_DIR = build
@@ -13,4 +14,4 @@ TARGETS = life_test
 all: ${TARGETS}
 
 life_test:
-	${CC} ${CFLAGS} ${SRC_FILES} -o ${BUILD_DIR}/$@ && ./${BUILD_DIR}/$@
+	${CC} ${CFLAGS} ${SRC_FILES} -o ${BUILD_DIR}/$@ ${LDFLAGS} && ./${BUILD_DIR}/$@
