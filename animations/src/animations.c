@@ -12,8 +12,12 @@
  */
 void delays(int delay_in_seconds)
 {
+	// Use nanosleep for real wall-clock delay (clock() measures CPU time, not elapsed time)
 	struct timespec ts = { .tv_sec = delay_in_seconds, .tv_nsec = 0 };
-	nanosleep(&ts, NULL);
+	struct timespec remaining;
+	// Retry if interrupted by a signal
+	while (nanosleep(&ts, &remaining) == -1)
+		ts = remaining;
 }
 
 void animate_world(int n, int world[][VIRTUAL_MAX_COLS + 2],
