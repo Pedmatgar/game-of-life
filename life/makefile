@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -O3 -Wall -march=native -ftree-vectorize -I$(INCLUDE_DIR)
+CFLAGS = -g -O2 -Wall -msse2 -I$(INCLUDE_DIR)
 
 SRC_DIR = src
 BUILD_DIR = build
