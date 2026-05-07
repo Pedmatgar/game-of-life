@@ -13,7 +13,7 @@ This repository has two parts:
 From the repository root:
 
 ```bash
-cd /home/runner/work/game-of-life/game-of-life/life
+cd life
 make
 ```
 
@@ -88,7 +88,7 @@ If you do **not** have MPI installed, skip this section.
 Build MPI executable:
 
 ```bash
-cd /home/runner/work/game-of-life/game-of-life/life
+cd life
 make life_mpi_test
 ```
 
@@ -118,7 +118,7 @@ Either:
 - use regular mode only:
 
 ```bash
-cd /home/runner/work/game-of-life/game-of-life/life
+cd life
 make
 ```
 
@@ -154,7 +154,6 @@ All return elapsed time in seconds (`double`).
 ## 7) Build animations app
 
 ```bash
-cd /home/runner/work/game-of-life/game-of-life/animations
+cd animations
 make
 ```
-
