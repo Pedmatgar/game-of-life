@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include "life.h"
+#ifdef USE_MPI
+#include <mpi.h>
+#endif
 
 // Square world: PERF_SIZE x PERF_SIZE (uses VIRTUAL_MAX_COLS as the single
 // dimension limit since the grid is intentionally square)
@@ -48,6 +51,13 @@ static void fill_sparse(int world[][MAX_COLS], int rows, int cols)
 
 int main(void)
 {
+#ifdef USE_MPI
+	MPI_Init(NULL, NULL);
+	int mpi_rank = 0, mpi_size = 1;
+	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+#endif
+
 	int rule[RULE_SIZE] = {3, 2, 3}; // Default Conway rule
 
 	// Effective array size: (PERF_SIZE + 2) x MAX_COLS
@@ -56,29 +66,59 @@ int main(void)
 
 	double total;
 
+#ifdef USE_MPI
+	if (mpi_rank == 0)
+		printf("Performance benchmark (MPI): %d x %d world, %d iterations each, ranks=%d\n\n",
+			   PERF_SIZE, PERF_SIZE, PERF_ITERS, mpi_size);
+#else
 	printf("Performance benchmark: %d x %d world, %d iterations each\n\n",
 		   PERF_SIZE, PERF_SIZE, PERF_ITERS);
+#endif
 
 	// -------------------------------------------------------------------------------
 	// Scenario 1: Dense world (all cells alive)
 
 	fill_dense(world, PERF_SIZE, PERF_SIZE);
+#ifdef USE_MPI
+	total = update_world_n_generations_mpi_timed(PERF_ITERS, world, PERF_SIZE, PERF_SIZE, aux, rule);
+#else
 	total = update_world_n_generations_timed(PERF_ITERS, world, PERF_SIZE, PERF_SIZE, aux, rule, NULL);
+#endif
+#ifdef USE_MPI
+	if (mpi_rank == 0)
+#endif
 	report("dense", PERF_ITERS, PERF_SIZE, PERF_SIZE, total);
 
 	// -------------------------------------------------------------------------------
 	// Scenario 2: Checkerboard pattern
 
 	fill_checkerboard(world, PERF_SIZE, PERF_SIZE);
+#ifdef USE_MPI
+	total = update_world_n_generations_mpi_timed(PERF_ITERS, world, PERF_SIZE, PERF_SIZE, aux, rule);
+#else
 	total = update_world_n_generations_timed(PERF_ITERS, world, PERF_SIZE, PERF_SIZE, aux, rule, NULL);
+#endif
+#ifdef USE_MPI
+	if (mpi_rank == 0)
+#endif
 	report("checkerboard", PERF_ITERS, PERF_SIZE, PERF_SIZE, total);
 
 	// -------------------------------------------------------------------------------
 	// Scenario 3: Sparse world (cross in center)
 
 	fill_sparse(world, PERF_SIZE, PERF_SIZE);
+#ifdef USE_MPI
+	total = update_world_n_generations_mpi_timed(PERF_ITERS, world, PERF_SIZE, PERF_SIZE, aux, rule);
+#else
 	total = update_world_n_generations_timed(PERF_ITERS, world, PERF_SIZE, PERF_SIZE, aux, rule, NULL);
+#endif
+#ifdef USE_MPI
+	if (mpi_rank == 0)
+#endif
 	report("sparse (cross)", PERF_ITERS, PERF_SIZE, PERF_SIZE, total);
 
+#ifdef USE_MPI
+	MPI_Finalize();
+#endif
 	return 0;
 }

@@ -9,6 +9,7 @@ This tutorial explains how to measure the execution time of the Game of Life sim
 - GCC (or any C99-compatible compiler)
 - `make`
 - A Unix-like system (Linux, macOS) — `CLOCK_MONOTONIC` from `<time.h>` is used internally
+- Optional: MPI implementation (`mpicc`, `mpirun`) for distributed benchmark mode
 
 ---
 
@@ -42,6 +43,7 @@ Two functions measure elapsed wall-clock time using `clock_gettime(CLOCK_MONOTON
 |---|---|
 | `update_world_timed(...)` | Time for a **single** generation update |
 | `update_world_n_generations_timed(...)` | Total time for **n** generation updates, with optional per-step breakdown |
+| `update_world_n_generations_mpi_timed(...)` *(with `-DUSE_MPI`)* | Total time for **n** generations using MPI row decomposition |
 
 Both functions advance the world normally and return the elapsed time in **seconds** as a `double`.
 
@@ -128,6 +130,35 @@ printf("Total: %.9f s\n", total);
 ```
 
 The sum of all `step_times[i]` equals the returned `total`.
+
+---
+
+## MPI-accelerated updates
+
+The `life` module also includes an MPI path (enabled with `-DUSE_MPI`) that
+splits world rows across ranks, computes each rank's slice locally, and
+rebuilds the full world each generation with `MPI_Allgatherv`.
+
+Build the MPI executable:
+
+```
+    .../game-of-life/life$ make life_mpi_test
+```
+
+Run with `N` MPI ranks:
+
+```
+    .../game-of-life/life$ mpirun -np N ./build/life_mpi_test
+```
+
+Use the MPI timing API in your own code:
+
+```c
+double total = update_world_n_generations_mpi_timed(
+    n, world, rows, cols, world_aux, rule);
+```
+
+It returns the global step time (maximum elapsed rank time) in seconds.
 
 ---
 

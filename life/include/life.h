@@ -151,6 +151,27 @@ double update_world_n_generations_timed(
 	int world_aux[][MAX_COLS], const int rule[RULE_SIZE],
 	double *step_times);
 
+#ifdef USE_MPI
+/*
+ * Function: update_world_n_generations_mpi_timed
+ * ----------------------------
+ * Updates the world n generations using MPI row decomposition and measures the
+ * elapsed time.
+ *
+ * n: number of generations to update
+ * world: matrix of 0s and 1s (replicated on all ranks)
+ * rows_count: number of rows
+ * cols_count: number of columns
+ * world_aux: auxiliary world (used for local row updates)
+ * rule: life game rule -> {maxNeighbors, minNeighbors, neighborsToBorn}
+ *
+ * returns: total elapsed time in seconds (maximum across ranks)
+ */
+double update_world_n_generations_mpi_timed(
+	int n, int world[][MAX_COLS], int rows_count, int cols_count,
+	int world_aux[][MAX_COLS], const int rule[RULE_SIZE]);
+#endif
+
 /*
  * Function: fprint_world
  * ----------------------------
