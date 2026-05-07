@@ -1,209 +1,160 @@
-# Measuring Execution Time in Game of Life
+# Game of Life (C) — Beginner Friendly Guide
 
-This tutorial explains how to measure the execution time of the Game of Life simulation using the timing API provided by the `life` module.
+If you are new to C projects, start here.  
+This repository has two parts:
+
+- `life/`: core simulation + benchmark executable
+- `animations/`: animation generator app
 
 ---
 
-## Prerequisites
+## 1) Fastest way to run something
 
-- GCC (or any C99-compatible compiler)
+From the repository root:
+
+```bash
+cd /home/runner/work/game-of-life/game-of-life/life
+make
+```
+
+What this does:
+
+1. Compiles `src/life.c` + `src/life_test.c`
+2. Creates `build/life_test`
+3. Runs it immediately
+
+Typical output:
+
+```text
+Performance benchmark: 71 x 71 world, 1000 iterations each
+
+dense                           iters=1000  total=... s  avg=... s  throughput=... cells/s
+checkerboard                    iters=1000  total=... s  avg=... s  throughput=... cells/s
+sparse (cross)                  iters=1000  total=... s  avg=... s  throughput=... cells/s
+```
+
+If you can run this command, your setup is working.
+
+---
+
+## 2) Requirements
+
+Minimum (for normal run):
+
+- `gcc`
 - `make`
-- A Unix-like system (Linux, macOS) — `CLOCK_MONOTONIC` from `<time.h>` is used internally
-- Optional: MPI implementation (`mpicc`, `mpirun`) for distributed benchmark mode
+- Linux/macOS environment
+
+Optional (only for MPI/distributed run):
+
+- `mpicc`
+- `mpirun`
 
 ---
 
-## Build
+## 3) Install help (common systems)
 
-The `life` module and its tests are built with the Makefile inside the `life` directory:
+### Ubuntu / Debian
 
+```bash
+sudo apt update
+sudo apt install -y build-essential make
 ```
-    .../game-of-life/life$ make
+
+Optional MPI:
+
+```bash
+sudo apt install -y openmpi-bin libopenmpi-dev
 ```
 
-To build and run the animation app:
+### macOS (Homebrew)
 
+```bash
+brew install make gcc
 ```
-    .../game-of-life/animations$ make
+
+Optional MPI:
+
+```bash
+brew install open-mpi
 ```
 
 ---
 
-## Timing API Overview
+## 4) MPI mode (optional)
 
-Include the header and link `life.c` in your program:
+If you do **not** have MPI installed, skip this section.
+
+Build MPI executable:
+
+```bash
+cd /home/runner/work/game-of-life/game-of-life/life
+make life_mpi_test
+```
+
+Run with 4 processes:
+
+```bash
+mpirun -np 4 ./build/life_mpi_test
+```
+
+Note: normal `make` does not need MPI.
+
+---
+
+## 5) Troubleshooting (“I cannot run it”)
+
+### `make: command not found`
+Install `make` (see section 3).
+
+### `gcc: command not found`
+Install compiler tools (see section 3).
+
+### `mpicc: No such file or directory`
+You tried MPI build without MPI installed.  
+Either:
+
+- install MPI (section 3), or
+- use regular mode only:
+
+```bash
+cd /home/runner/work/game-of-life/game-of-life/life
+make
+```
+
+### Permission errors
+Run inside your own writable clone directory and avoid system-protected paths.
+
+### Command works but numbers differ from docs
+That is expected. Timing depends on CPU, OS, background processes, and compiler.
+
+---
+
+## 6) Timing APIs (for developers)
+
+Include:
 
 ```c
 #include "life.h"
 ```
 
-Two functions measure elapsed wall-clock time using `clock_gettime(CLOCK_MONOTONIC, ...)`:
+Available timing functions:
 
-| Function | What it measures |
-|---|---|
-| `update_world_timed(...)` | Time for a **single** generation update |
-| `update_world_n_generations_timed(...)` | Total time for **n** generation updates, with optional per-step breakdown |
-| `update_world_n_generations_mpi_timed(...)` *(with `-DUSE_MPI`)* | Total time for **n** generations using MPI row decomposition |
+- `update_world_timed(...)`  
+  Time for one generation
+- `update_world_n_generations_timed(...)`  
+  Time for `n` generations (optionally per-step)
+- `update_world_n_generations_mpi_timed(...)` (only with `-DUSE_MPI`)  
+  Time for `n` generations using MPI row decomposition
 
-Both functions advance the world normally and return the elapsed time in **seconds** as a `double`.
-
----
-
-## Tutorial: Timing a Single Generation
-
-```c
-#include <stdio.h>
-#include "life.h"
-
-int main(void)
-{
-    /* 1. Declare the world (virtual size rows x cols; array needs rows+2 = 12 rows) */
-    int rows = 10, cols = 10;
-    int world[12][MAX_COLS];
-    int world_aux[12][MAX_COLS];
-
-    /* 2. Initialise all cells to dead */
-    clear_world(world, rows, cols);
-
-    /* 3. Set up an initial pattern (a simple blinker) */
-    set_cell(world, 5, 4, 1);
-    set_cell(world, 5, 5, 1);
-    set_cell(world, 5, 6, 1);
-
-    /* 4. Choose the standard Conway rule {maxNeighbors, minNeighbors, neighborsToBorn} */
-    int rule[RULE_SIZE] = {3, 2, 3};
-
-    /* 5. Advance one generation and measure the time */
-    double elapsed = update_world_timed(world, rows, cols, world_aux, rule);
-
-    printf("One generation took %.9f seconds\n", elapsed);
-
-    return 0;
-}
-```
-
-Compile and run:
-
-```
-gcc -Wall -Ilife/include life/src/life.c my_timing.c -o my_timing
-./my_timing
-```
-
-Expected output (times will vary by hardware):
-
-```
-One generation took 0.000002341 seconds
-```
+All return elapsed time in seconds (`double`).
 
 ---
 
-## Tutorial: Timing Multiple Generations
+## 7) Build animations app
 
-### Total time only
-
-Pass `NULL` as the last argument when you only need the grand total:
-
-```c
-int n = 100;
-double total = update_world_n_generations_timed(
-    n, world, rows, cols, world_aux, rule, NULL);
-
-printf("100 generations took %.9f seconds (%.6f ms)\n",
-       total, total * 1000.0);
+```bash
+cd /home/runner/work/game-of-life/game-of-life/animations
+make
 ```
 
-### Per-step breakdown
-
-Allocate an array of `n` doubles to capture each individual generation time:
-
-```c
-int n = 5;
-double step_times[5];
-
-double total = update_world_n_generations_timed(
-    n, world, rows, cols, world_aux, rule, step_times);
-
-for (int i = 0; i < n; i++)
-    printf("  Step %d: %.9f s\n", i + 1, step_times[i]);
-
-printf("Total: %.9f s\n", total);
-```
-
-The sum of all `step_times[i]` equals the returned `total`.
-
----
-
-## MPI-accelerated updates
-
-The `life` module also includes an MPI path (enabled with `-DUSE_MPI`) that
-splits world rows across ranks, computes each rank's slice locally, and
-rebuilds the full world each generation with `MPI_Allgatherv`.
-
-Build the MPI executable:
-
-```
-    .../game-of-life/life$ make life_mpi_test
-```
-
-Run with `N` MPI ranks:
-
-```
-    .../game-of-life/life$ mpirun -np N ./build/life_mpi_test
-```
-
-Use the MPI timing API in your own code:
-
-```c
-double total = update_world_n_generations_mpi_timed(
-    n, world, rows, cols, world_aux, rule);
-```
-
-It returns the global step time (maximum elapsed rank time) in seconds.
-
----
-
-## Understanding the World Layout
-
-The world array is padded by one extra row and column on every side to simplify the
-wrap-around boundary logic.  A virtual grid of `R` rows × `C` cols therefore requires
-an array of size `(R+2) × (MAX_COLS)`:
-
-```
-  world[0][*]          <- padding row (top)
-  world[1..R][1..C]    <- live cells
-  world[R+1][*]        <- padding row (bottom)
-  world[*][0]          <- padding column (left)
-  world[*][C+1]        <- padding column (right)
-```
-
-`MAX_COLS` is defined in `life.h` as `VIRTUAL_MAX_COLS + 2` (currently 73).
-
----
-
-## Rule Format
-
-The `rule` array has three elements:
-
-```c
-int rule[RULE_SIZE] = {maxNeighbors, minNeighbors, neighborsToBorn};
-```
-
-| Index | Meaning | Conway value |
-|---|---|---|
-| 0 | `maxNeighbors` — maximum live neighbors for a live cell to survive | 3 |
-| 1 | `minNeighbors` — minimum live neighbors for a live cell to survive | 2 |
-| 2 | `neighborsToBorn` — exact live neighbors needed to birth a dead cell | 3 |
-
----
-
-## Running the Existing Tests
-
-The `life_test.c` file already exercises both timing functions and prints per-step and
-total times.  Build and run it with:
-
-```
-    .../game-of-life/life$ make
-```
-
-Look for the sections labelled **Testing update_world_timed** and
-**Testing update_world_n_generations_timed** in the output.
