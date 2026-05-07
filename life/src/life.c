@@ -3,6 +3,9 @@
 #include <string.h>
 #include <time.h>
 #include "life.h"
+#ifdef USE_MPI
+#include <mpi.h>
+#endif
 
 static double elapsed_seconds(struct timespec start, struct timespec end)
 {
@@ -154,6 +157,96 @@ double update_world_n_generations_timed(
 	}
 	return total;
 }
+
+#ifdef USE_MPI
+static void mpi_partition_rows(int rows_count, int mpi_size, int rank, int *start_row, int *local_rows)
+{
+	int base = rows_count / mpi_size;
+	int rem = rows_count % mpi_size;
+	*local_rows = base + (rank < rem ? 1 : 0);
+	*start_row = 1 + rank * base + (rank < rem ? rank : rem);
+}
+
+static int next_state_direct(
+	const int world[][MAX_COLS],
+	int row, int col, int rows_count, int cols_count, const int rule[RULE_SIZE])
+{
+	int pre_row = (row == 1) ? rows_count : row - 1;
+	int pos_row = (row == rows_count) ? 1 : row + 1;
+	int pre_col = (col == 1) ? cols_count : col - 1;
+	int pos_col = (col == cols_count) ? 1 : col + 1;
+
+	int live_cells =
+		world[pre_row][pre_col] + world[pre_row][col] + world[pre_row][pos_col] +
+		world[row][pre_col] + world[row][pos_col] +
+		world[pos_row][pre_col] + world[pos_row][col] + world[pos_row][pos_col];
+
+	int cell = world[row][col];
+	return (cell == 1 && (live_cells >= rule[1] && live_cells <= rule[0])) ||
+		   (cell == 0 && live_cells == rule[2]);
+}
+
+double update_world_n_generations_mpi_timed(
+	int n, int world[][MAX_COLS], int rows_count, int cols_count,
+	int world_aux[][MAX_COLS], const int rule[RULE_SIZE])
+{
+	if (n <= 0)
+		return 0.0;
+
+	int mpi_size = 1, rank = 0;
+	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+	int start_row = 1;
+	int local_rows = rows_count;
+	mpi_partition_rows(rows_count, mpi_size, rank, &start_row, &local_rows);
+
+	int *recvcounts = (int *)malloc((size_t)mpi_size * sizeof(int));
+	int *displs = (int *)malloc((size_t)mpi_size * sizeof(int));
+	if (recvcounts == NULL || displs == NULL)
+	{
+		free(recvcounts);
+		free(displs);
+		return 0.0;
+	}
+
+	for (int r = 0; r < mpi_size; r++)
+	{
+		int rank_start = 1;
+		int rank_rows = 0;
+		mpi_partition_rows(rows_count, mpi_size, r, &rank_start, &rank_rows);
+		recvcounts[r] = rank_rows * MAX_COLS;
+		displs[r] = rank_start * MAX_COLS;
+	}
+
+	MPI_Barrier(MPI_COMM_WORLD);
+	double start = MPI_Wtime();
+
+	for (int step = 0; step < n; step++)
+	{
+		for (int row = start_row; row < start_row + local_rows; row++)
+		{
+			for (int col = 1; col <= cols_count; col++)
+			{
+				world_aux[row][col] = next_state_direct(world, row, col, rows_count, cols_count, rule);
+			}
+		}
+
+		int send_count = local_rows * MAX_COLS;
+		int *send_buf = (local_rows > 0) ? &world_aux[start_row][0] : NULL;
+		MPI_Allgatherv(send_buf, send_count, MPI_INT,
+					   &world[0][0], recvcounts, displs, MPI_INT, MPI_COMM_WORLD);
+	}
+
+	double local_elapsed = MPI_Wtime() - start;
+	double global_elapsed = 0.0;
+	MPI_Allreduce(&local_elapsed, &global_elapsed, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
+	free(recvcounts);
+	free(displs);
+	return global_elapsed;
+}
+#endif
 
 void fprint_world(const int world[][MAX_COLS], int rows_count, int cols_count, FILE *__restrict__ __stream)
 {
