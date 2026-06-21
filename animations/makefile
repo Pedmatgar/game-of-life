@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -Wall -I${INCLUDE_DIR} -I${LIFE_INCLUDE_DIR}
+CFLAGS = -g -O2 -Wall -msse2 -I${INCLUDE_DIR} -I${LIFE_INCLUDE_DIR}
 
 SRC_DIR = src
 BUILD_DIR = build
